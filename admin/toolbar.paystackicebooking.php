@@ -14,7 +14,7 @@
 
 defined( '_JEXEC' ) or die( 'Restricted access' );
 require_once( JApplicationHelper::getPath( 'toolbar_html' ) );
-switch($task)
+switch(isset($task) ? $task : null)
 {
   default:
     TOOLBAR_paystackicebooking::_DEFAULT();
