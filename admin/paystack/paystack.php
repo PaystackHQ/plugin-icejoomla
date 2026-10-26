@@ -14,6 +14,7 @@
 
 defined('_JEXEC') or die ( 'Restricted access' );
 require_once(JPATH_COMPONENT_ADMINISTRATOR.DS.'gateways/gatewayInterface.php');
+#[\AllowDynamicProperties]
 class IcebookingModelPaystack extends GatewayInterface
 {
 
@@ -82,27 +83,23 @@ class IcebookingModelPaystack extends GatewayInterface
         if (curl_errno($ch)) {   
             // curl ended with an error
             $transactionInit->error = "cURL said: " . curl_error($ch);
-            curl_close($ch);
         } else {
-
-            //close connection
-            curl_close($ch);
 
             // Then, after your curl_exec call:
             $body = json_decode($response);
-            if(!$body->status){
+            if(!isset($body->status) || !$body->status){
                 // paystack has an error message for us
-                $transactionInit->error = "Paystack API said: " . $body->message;
+                $transactionInit->error = "Paystack API said: " . (isset($body->message) ? $body->message : '');
             } else {
                 // get body returned by Paystack API
                 $transactionInit = $body->data;
             }
         }
         
-        if($transactionInit->error)
+        if(!empty($transactionInit->error))
         {
             die("Error while attempting to initialize transaction: " . 
-                "\n<br>" . $transactionStatus->error); 
+                "\n<br>" . $transactionInit->error); 
         }
         else
         {
@@ -113,13 +110,13 @@ class IcebookingModelPaystack extends GatewayInterface
 
     public function createhash($data)
     {
-        $str = round($data["gateway_amount"]).$data["bookingID"].$this->configs['MERCHANT_ID'].dirname(__FILE__);
+        $str = round($data["gateway_amount"]).$data["bookingID"].(isset($this->configs['MERCHANT_ID']) ? $this->configs['MERCHANT_ID'] : '').dirname(__FILE__);
         return md5($str);
     }
 
     public function getConfigurationForm()
     {
-        $configs  =& $this->_getConfigurationsArray();
+        $configs  = $this->_getConfigurationsArray();
         $iceLang = $this->getInstance('languages', 'icebookingModel');
         $languages = $iceLang->getFrontendLanguages();
         $firstRun = true;
@@ -131,13 +128,13 @@ class IcebookingModelPaystack extends GatewayInterface
                     $languageClickList .= '| <a href="#" class="langSelected" title="'.
                     $key.'">'.$value.'</a>'.' | ';
                     $buttonTextFields .= '<input type="text" class="'.
-                    $key.'" size="40" value="'.$configs['BUTTON_TEXT_'.$key].
+                    $key.'" size="40" value="'.(isset($configs['BUTTON_TEXT_'.$key]) ? $configs['BUTTON_TEXT_'.$key] : '').
                     '" name="BUTTON_TEXT_'.$key.'" id="u_'.$key.'"/>';
                 } else {
                     $languageClickList .= '<a href="#" title="'.$key.'">'.
                     $value.'</a>'.' | ';
                     $buttonTextFields .= '<input style="display:none;" type="text" class="'.
-                    $key.'" size="40" value="'.$configs['BUTTON_TEXT_'.$key].
+                    $key.'" size="40" value="'.(isset($configs['BUTTON_TEXT_'.$key]) ? $configs['BUTTON_TEXT_'.$key] : '').
                     '" name="BUTTON_TEXT_'.$key.'" id="u_'.$key.'"/>';
                 }
                 $firstRun=false;
@@ -227,24 +224,20 @@ class IcebookingModelPaystack extends GatewayInterface
         if (curl_errno($ch)) {   
             // curl ended with an error
             $transactionStatus->error = "cURL said:" . curl_error($ch);
-            curl_close($ch);
         } else {
-
-            //close connection
-            curl_close($ch);
 
             // Then, after your curl_exec call:
             $body = json_decode($response);
-            if(!$body->status){
+            if(!isset($body->status) || !$body->status){
                 // paystack has an error message for us
-                $transactionStatus->error = "Paystack API said: " . $body->message;
+                $transactionStatus->error = "Paystack API said: " . (isset($body->message) ? $body->message : '');
             } else {
                 // get body returned by Paystack API
                 $transactionStatus = $body->data;
             }
         }
 
-        if($transactionStatus->status == 'success')
+        if(isset($transactionStatus->status) && $transactionStatus->status == 'success')
         {
             //Success insert into gateway table and update pay amount
             $insert = array();
@@ -263,7 +256,7 @@ class IcebookingModelPaystack extends GatewayInterface
         else
         {
             die("Error while attempting to verify transaction: trxref: " . $trxref . 
-                "\n<br>" . $transactionStatus->error);
+                "\n<br>" . (isset($transactionStatus->error) ? $transactionStatus->error : ''));
         }
     }
 
